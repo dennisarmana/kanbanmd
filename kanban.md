@@ -6,11 +6,6 @@ kanban-plugin: board
 
 ## Todo
 
-- [ ] Improve file synchronization mechanism (currently only download, not real-time sync)
-- [ ] Add auto-save functionality for continuous updates to markdown. Does this work with github? What's the best strategy to keep the kanban up to date?
-- [ ] Create version history and undo/redo capability
-- [ ] Add column customization (color, width, order)
-- [ ] Write unit tests for core functionality
 - [ ] Create documentation for deployment and usage
 - [ ] Optimize performance for larger Kanban boards
 - [ ] Add user settings and preferences
@@ -18,10 +13,23 @@ kanban-plugin: board
   - [ ] Debug issues with code blocks in cards
   - [ ] Improve nested list indentation handling
   - [ ] Add support for tables and other advanced Markdown features
-
+- [ ] Create version history and undo/redo capability
+- [ ] Add column customization (color, width, order)
+- [ ] Write unit tests for core functionality
 
 ## Doing
 
+- [ ] Implement real-time GitHub synchronization using Netlify #feature !high
+  - [ ] Enable Netlify Identity for the deployed site
+  - [ ] Add GitHub as OAuth provider in Netlify settings
+  - [ ] Integrate Netlify Identity widget into the application
+  - [ ] Create Netlify Functions for GitHub API operations
+  - [ ] Add auto-save to localStorage functionality
+  - [ ] Implement file read/write via Netlify Functions
+  - [ ] Add visual indicators for sync status
+  - [ ] Implement batched commits after periods of inactivity
+  - [ ] Add manual "Push Now" button
+  - [ ] Handle merge conflicts gracefully
 
 
 ## Done
