@@ -70,45 +70,89 @@ function createColumnElement(column, columnIndex) {
  * @returns {HTMLElement} The created card element
  */
 function createCardElement(card, cardIndex, columnIndex) {
+  // Ensure we have valid card data
+  if (!card) {
+    console.error('Invalid card data for column', columnIndex, 'index', cardIndex);
+    card = { text: 'New Card', completed: false };
+  }
+  
   const cardElement = document.createElement('div');
   cardElement.className = 'kanban-card';
   cardElement.dataset.cardIndex = cardIndex;
   cardElement.dataset.columnIndex = columnIndex;
-  cardElement.draggable = true;
+  cardElement.draggable = false; // Only enable dragging via the handle
+  
+  // Create drag handle
+  const dragHandle = document.createElement('div');
+  dragHandle.className = 'drag-handle';
+  dragHandle.innerHTML = '&#8942;&#8942;';
+  dragHandle.title = 'Drag to move card';
+  
+  // Create card content container
+  const cardContent = document.createElement('div');
+  cardContent.className = 'card-content';
+  
+  // Create checkbox container
+  const checkboxContainer = document.createElement('div');
+  checkboxContainer.className = 'checkbox-container';
   
   // Create checkbox for completion status
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
-  checkbox.checked = card.completed;
+  checkbox.className = 'task-checkbox';
+  checkbox.checked = !!card.completed; // Ensure boolean with !! operator
   checkbox.addEventListener('change', () => {
-    // Update the data model when checkbox is toggled
-    const boardData = getBoardDataFromDOM();
-    boardData[columnIndex].cards[cardIndex].completed = checkbox.checked;
-    saveBoard(boardData);
+    try {
+      // Update the data model when checkbox is toggled
+      const boardData = getBoardDataFromDOM();
+      // Make sure we're accessing valid data
+      if (boardData[columnIndex] && boardData[columnIndex].cards && boardData[columnIndex].cards[cardIndex]) {
+        boardData[columnIndex].cards[cardIndex].completed = checkbox.checked;
+        cardElement.classList.toggle('completed', checkbox.checked);
+        saveBoard(boardData);
+      }
+    } catch (error) {
+      console.error('Error updating checkbox state:', error);
+    }
   });
   
   // Create text content
   const textSpan = document.createElement('span');
   textSpan.className = 'card-text';
-  textSpan.textContent = card.text;
+  textSpan.textContent = card.text || 'New Card'; // Ensure we have text
   
   // Add double-click to edit
   textSpan.addEventListener('dblclick', () => {
-    handleEditCard(textSpan, columnIndex, cardIndex);
+    try {
+      handleEditCard(textSpan, columnIndex, cardIndex);
+    } catch (error) {
+      console.error('Error handling edit:', error);
+    }
   });
   
   // Create delete button
   const deleteBtn = document.createElement('button');
   deleteBtn.className = 'delete-card-btn';
   deleteBtn.innerHTML = '&times;';
+  deleteBtn.title = 'Delete card';
   deleteBtn.addEventListener('click', () => {
     handleDeleteCard(columnIndex, cardIndex);
   });
   
-  // Append elements to card
-  cardElement.appendChild(checkbox);
-  cardElement.appendChild(textSpan);
+  // Append elements in proper order
+  checkboxContainer.appendChild(checkbox);
+  cardContent.appendChild(checkboxContainer);
+  cardContent.appendChild(textSpan);
+  
+  // Add elements to card
+  cardElement.appendChild(dragHandle);
+  cardElement.appendChild(cardContent);
   cardElement.appendChild(deleteBtn);
+  
+  // Add completed class if needed
+  if (card.completed) {
+    cardElement.classList.add('completed');
+  }
   
   return cardElement;
 }
@@ -120,8 +164,34 @@ function initDragAndDrop() {
   const cards = document.querySelectorAll('.kanban-card');
   const columns = document.querySelectorAll('.cards-container');
   
+  // Track the currently dragged card to prevent multiple selections
+  let currentlyDragging = null;
+  
   // Add drag events to cards
   cards.forEach(card => {
+    // Make drag handle the trigger for drag operation
+    const dragHandle = card.querySelector('.drag-handle');
+    
+    if (dragHandle) {
+      dragHandle.addEventListener('mousedown', (e) => {
+        // Only allow one card to be draggable at a time
+        if (!currentlyDragging) {
+          card.draggable = true;
+          currentlyDragging = card;
+          // Stop event from bubbling up to prevent issues
+          e.stopPropagation();
+        }
+      });
+    }
+    
+    // Reset draggable state when mouse leaves the card
+    card.addEventListener('mouseleave', () => {
+      if (!card.classList.contains('dragging')) {
+        card.draggable = false;
+      }
+    });
+    
+    // Handle dragstart and dragend events
     card.addEventListener('dragstart', dragStart);
     card.addEventListener('dragend', dragEnd);
   });
@@ -134,17 +204,89 @@ function initDragAndDrop() {
     column.addEventListener('drop', drop);
   });
   
+  // Reset draggable state for all cards when mouse is clicked elsewhere
+  document.addEventListener('mousedown', (e) => {
+    // Check if click is outside of a drag handle
+    if (!e.target.closest('.drag-handle')) {
+      resetDraggableState();
+    }
+  });
+  
+  // Reset all cards' draggable state
+  function resetDraggableState() {
+    currentlyDragging = null;
+    document.querySelectorAll('.kanban-card').forEach(c => {
+      c.draggable = false;
+    });
+  }
+  
   // Drag functions
-  function dragStart() {
+  function dragStart(e) {
+    // Only one card should be draggable at a time
+    document.querySelectorAll('.kanban-card').forEach(card => {
+      if (card !== this) {
+        card.draggable = false;
+      }
+    });
+    
     this.classList.add('dragging');
+    
+    // Set a ghost drag image
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      // Set delay to ensure proper ghost image
+      setTimeout(() => {
+        this.classList.add('ghost');
+      }, 0);
+    }
   }
   
   function dragEnd() {
     this.classList.remove('dragging');
+    this.classList.remove('ghost');
+    this.draggable = false;
+    currentlyDragging = null;
+    
+    // Force a small delay before allowing dragging again to prevent glitches
+    setTimeout(() => {
+      document.querySelectorAll('.kanban-card').forEach(card => {
+        card.draggable = false;
+      });
+    }, 50);
   }
   
   function dragOver(e) {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    // Get dragged card
+    const draggedCard = document.querySelector('.dragging');
+    if (!draggedCard) return;
+    
+    // Find closest card to insert before
+    const cards = [...this.querySelectorAll('.kanban-card:not(.dragging)')];
+    const closestCard = findClosestCard(e.clientY, cards);
+    
+    // Insert dragged card in the right position
+    if (closestCard) {
+      this.insertBefore(draggedCard, closestCard);
+    } else {
+      this.appendChild(draggedCard);
+    }
+  }
+  
+  function findClosestCard(clientY, cards) {
+    // Find the closest card based on mouse position
+    return cards.reduce((closest, card) => {
+      const box = card.getBoundingClientRect();
+      const offset = clientY - box.top - box.height / 2;
+      
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: card };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
   }
   
   function dragEnter(e) {
@@ -159,34 +301,93 @@ function initDragAndDrop() {
   function drop() {
     this.classList.remove('drag-over');
     
-    // Get the dragged card
-    const draggedCard = document.querySelector('.dragging');
-    if (!draggedCard) return;
+    try {
+      // Get the dragged card
+      const draggedCard = document.querySelector('.dragging');
+      if (!draggedCard) return;
+      
+      // Get a fresh copy of the board data
+      const boardData = getBoardDataFromDOM();
+      
+      // Get the source and target indices
+      // These might be stale since the DOM may have changed, so we get them from scratch
+      const sourceColumnElement = draggedCard.closest('.kanban-column');
+      const targetColumnElement = this.closest('.kanban-column');
+      
+      if (!sourceColumnElement || !targetColumnElement) {
+        console.error('Could not find column elements');
+        return;
+      }
+      
+      // Get the actual index based on DOM position, not dataset
+      const sourceColumnIndex = Array.from(document.querySelectorAll('.kanban-column')).indexOf(sourceColumnElement);
+      const targetColumnIndex = Array.from(document.querySelectorAll('.kanban-column')).indexOf(targetColumnElement);
+      
+      if (sourceColumnIndex < 0 || targetColumnIndex < 0) {
+        console.error('Invalid column indices', sourceColumnIndex, targetColumnIndex);
+        return;
+      }
+      
+      // Get the card indices
+      const sourceCardElements = sourceColumnElement.querySelectorAll('.kanban-card');
+      const sourceCardIndex = Array.from(sourceCardElements).indexOf(draggedCard);
+      
+      if (sourceCardIndex < 0 || !boardData[sourceColumnIndex] || !boardData[sourceColumnIndex].cards[sourceCardIndex]) {
+        console.error('Invalid card index or data', sourceCardIndex);
+        return;
+      }
+      
+      // Get the actual card data
+      const cardData = {
+        text: draggedCard.querySelector('.card-text')?.textContent || 'New Card',
+        completed: draggedCard.querySelector('input[type="checkbox"]')?.checked || false
+      };
+      
+      // Get target position based on DOM order - where the card should be inserted
+      const targetCardIndex = findCardPositionInColumn(draggedCard, this);
+      
+      // Remove card from source column
+      boardData[sourceColumnIndex].cards.splice(sourceCardIndex, 1);
+      
+      // Make sure the target column has a cards array
+      if (!boardData[targetColumnIndex].cards) {
+        boardData[targetColumnIndex].cards = [];
+      }
+      
+      // Add card to target column at correct position
+      boardData[targetColumnIndex].cards.splice(targetCardIndex, 0, cardData);
+      
+      // Re-render board with updated data
+      renderKanbanBoard(document.getElementById('board-container'), boardData);
+      
+      // Save the updated board
+      saveBoard(boardData);
+    } catch (error) {
+      console.error('Error during drag and drop:', error);
+      // If anything goes wrong, just refresh the board
+      renderKanbanBoard(document.getElementById('board-container'), getBoardDataFromDOM());
+    } finally {
+      // Always reset drag state
+      document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+      document.querySelectorAll('.ghost').forEach(el => el.classList.remove('ghost'));
+    }
+  }
+  
+  /**
+   * Find the position where a card should be inserted in a column
+   * @param {HTMLElement} draggedCard - The card being dragged
+   * @param {HTMLElement} targetColumn - The column to insert into
+   * @returns {number} The position to insert at
+   */
+  function findCardPositionInColumn(draggedCard, targetColumn) {
+    const cards = [...targetColumn.querySelectorAll('.kanban-card')];
+    const draggedCardIndex = cards.indexOf(draggedCard);
     
-    // Source column and card indices
-    const sourceColumnIndex = parseInt(draggedCard.dataset.columnIndex);
-    const sourceCardIndex = parseInt(draggedCard.dataset.cardIndex);
+    // If the card is not found, add to the end
+    if (draggedCardIndex === -1) return cards.length;
     
-    // Target column index
-    const targetColumnIndex = parseInt(this.parentNode.dataset.columnIndex);
-    
-    // Get current board data
-    const boardData = getBoardDataFromDOM();
-    
-    // Get the card data
-    const cardData = boardData[sourceColumnIndex].cards[sourceCardIndex];
-    
-    // Remove card from source column
-    boardData[sourceColumnIndex].cards.splice(sourceCardIndex, 1);
-    
-    // Add card to target column
-    boardData[targetColumnIndex].cards.push(cardData);
-    
-    // Re-render board with updated data
-    renderKanbanBoard(document.getElementById('board-container'), boardData);
-    
-    // Save the updated board
-    saveBoard(boardData);
+    return draggedCardIndex;
   }
 }
 
@@ -218,36 +419,68 @@ function handleAddCard(columnIndex) {
  */
 function handleEditCard(textElement, columnIndex, cardIndex) {
   const currentText = textElement.textContent;
+  const cardContent = textElement.closest('.card-content');
   
-  // Replace text with input field
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = currentText;
-  input.className = 'edit-card-input';
+  // Use a textarea instead of input for better multiline editing
+  const textarea = document.createElement('textarea');
+  textarea.value = currentText;
+  textarea.className = 'edit-card-input';
+  textarea.rows = Math.max(1, (currentText.match(/\n/g) || []).length + 1);
   
-  textElement.parentNode.replaceChild(input, textElement);
-  input.focus();
+  // Set the width based on the card's content area
+  if (cardContent) {
+    const width = cardContent.clientWidth - 40; // account for padding
+    textarea.style.width = width + 'px';
+  }
+  
+  // Replace text with textarea
+  textElement.parentNode.replaceChild(textarea, textElement);
+  textarea.focus();
+  
+  // Select all text initially for easy replacement
+  textarea.setSelectionRange(0, textarea.value.length);
+  
+  // Auto-resize the textarea based on content
+  function adjustHeight() {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(200, textarea.scrollHeight) + 'px';
+  }
+  
+  textarea.addEventListener('input', adjustHeight);
+  adjustHeight(); // Initial adjustment
   
   // Handle saving changes when done editing
   function saveEdit() {
-    const newText = input.value.trim();
+    const newText = textarea.value.trim() || 'New Card';
     
     // Update text element
     textElement.textContent = newText;
-    input.parentNode.replaceChild(textElement, input);
+    textarea.parentNode.replaceChild(textElement, textarea);
     
     // Update data model
-    const boardData = getBoardDataFromDOM();
-    boardData[columnIndex].cards[cardIndex].text = newText;
-    
-    // Save changes
-    saveBoard(boardData);
+    try {
+      const boardData = getBoardDataFromDOM();
+      if (boardData[columnIndex] && boardData[columnIndex].cards && boardData[columnIndex].cards[cardIndex]) {
+        boardData[columnIndex].cards[cardIndex].text = newText;
+        saveBoard(boardData);
+      }
+    } catch (error) {
+      console.error('Error saving edit:', error);
+    }
   }
   
-  input.addEventListener('blur', saveEdit);
-  input.addEventListener('keypress', e => {
-    if (e.key === 'Enter') {
+  // Handle clicking outside the textarea
+  textarea.addEventListener('blur', saveEdit);
+  
+  // Handle keyboard shortcuts
+  textarea.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      // Enter without shift saves the edit
+      e.preventDefault();
       saveEdit();
+    } else if (e.key === 'Escape') {
+      // Escape cancels editing
+      textElement.parentNode.replaceChild(textElement, textarea);
     }
   });
 }
@@ -281,13 +514,13 @@ function getBoardDataFromDOM() {
   const columns = document.querySelectorAll('.kanban-column');
   const boardData = [];
   
-  columns.forEach(column => {
-    const columnIndex = parseInt(column.dataset.columnIndex);
+  columns.forEach((column, index) => {
+    // Use the actual index rather than dataset value which might be incorrect after reordering
     const headerElement = column.querySelector('.column-header');
     const cardElements = column.querySelectorAll('.kanban-card');
     
     const columnData = {
-      title: headerElement.textContent,
+      title: headerElement ? headerElement.textContent : `Column ${index + 1}`,
       cards: []
     };
     
@@ -295,16 +528,20 @@ function getBoardDataFromDOM() {
       const checkbox = card.querySelector('input[type="checkbox"]');
       const textSpan = card.querySelector('.card-text');
       
-      columnData.cards.push({
-        text: textSpan.textContent,
-        completed: checkbox.checked
-      });
+      // Ensure we have valid data
+      if (textSpan) {
+        columnData.cards.push({
+          text: textSpan.textContent || 'New card',
+          completed: checkbox ? checkbox.checked : false
+        });
+      }
     });
     
-    boardData[columnIndex] = columnData;
+    boardData[index] = columnData;
   });
   
-  return boardData;
+  // Remove any undefined entries and ensure we have a contiguous array
+  return boardData.filter(Boolean);
 }
 
 /**
@@ -312,20 +549,28 @@ function getBoardDataFromDOM() {
  * @param {HTMLElement} container - The board container element
  */
 function addControlButtons(container) {
+  // First, remove any existing board controls to prevent duplication
+  document.querySelectorAll('.board-controls').forEach(el => el.remove());
+  
   const controlsDiv = document.createElement('div');
   controlsDiv.className = 'board-controls';
+  controlsDiv.id = 'board-controls'; // Add an ID for easier selection
   
   // Back button
   const backButton = document.createElement('button');
   backButton.textContent = 'Back to File Selection';
+  backButton.className = 'back-button';
   backButton.addEventListener('click', () => {
     document.getElementById('file-section').style.display = 'block';
     container.classList.add('hidden');
+    // Also remove the controls when going back
+    controlsDiv.remove();
   });
   
   // Save button
   const saveButton = document.createElement('button');
   saveButton.textContent = 'Download Kanban.md';
+  saveButton.className = 'save-button';
   saveButton.addEventListener('click', () => {
     downloadKanbanFile();
   });

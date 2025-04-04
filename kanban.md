@@ -6,7 +6,6 @@ kanban-plugin: board
 
 ## Todo
 
-- [ ] Fix visual issues in rendered Kanban board (card alignment, delete buttons, drag handles)
 - [ ] Design Markdown parser to extract Kanban structure
 - [ ] Build visual board rendering from parsed Markdown
 - [ ] Implement card editing functionality
@@ -28,6 +27,7 @@ kanban-plugin: board
 
 ## Done
 
+- [x] Fix visual issues in rendered Kanban board (card alignment, delete buttons, drag handles, text editing)
 - [x] The kanban.md file lives in a github repo. Can we pull it directly from there? (Improved with error handling and branch selection)
 - [x] Create basic HTML/CSS layout for the web application
 - [x] Set up project structure and initialize repository (GitHub repo: https://github.com/dennisarmana/kanbanmd.git)
