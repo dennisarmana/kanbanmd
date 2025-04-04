@@ -33,7 +33,6 @@ function initAuth() {
     domain: 'dev-zjt51en5zisu615c.us.auth0.com',
     clientID: 'iFZoba1GgxzgPpQr9mVkkL3cospv4BnC',
     responseType: 'token id_token',
-    audience: 'https://api.github.com/',
     scope: 'openid profile email read:user repo',
     redirectUri: window.location.origin
   });
@@ -121,11 +120,11 @@ function setSession(authResult) {
   localStorage.setItem('auth0_id_token', authResult.idToken);
   localStorage.setItem('auth0_expires_at', expiresAt);
   
-  // Store GitHub token if present
-  if (authResult.idTokenPayload && authResult.idTokenPayload['https://api.github.com/']) {
-    const githubToken = authResult.idTokenPayload['https://api.github.com/'].access_token;
-    localStorage.setItem('github_token', githubToken);
-    authState.githubToken = githubToken;
+  // Store access token as GitHub token
+  // Since we're using GitHub as our identity provider, the access token is the GitHub token
+  if (authResult.accessToken) {
+    localStorage.setItem('github_token', authResult.accessToken);
+    authState.githubToken = authResult.accessToken;
   }
 }
 
@@ -138,9 +137,9 @@ function handleUserLogin(user, authResult) {
   authState.user = user;
   authState.isAuthenticated = true;
   
-  // Grab GitHub token from the ID token if available
-  if (authResult && authResult.idTokenPayload && authResult.idTokenPayload['https://api.github.com/']) {
-    authState.githubToken = authResult.idTokenPayload['https://api.github.com/'].access_token;
+  // When using GitHub as identity provider, the access token is the GitHub token
+  if (authResult && authResult.accessToken) {
+    authState.githubToken = authResult.accessToken;
   } else {
     // Try to get from localStorage as a backup
     authState.githubToken = localStorage.getItem('github_token');
