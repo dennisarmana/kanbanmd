@@ -6,8 +6,7 @@ kanban-plugin: board
 
 ## Todo
 
-- [ ] Create basic HTML/CSS layout for the web application
-- [ ] The kanban.md file lives in a github repo. Can we pull it directly from there?
+- [ ] Fix visual issues in rendered Kanban board (card alignment, delete buttons, drag handles)
 - [ ] Design Markdown parser to extract Kanban structure
 - [ ] Build visual board rendering from parsed Markdown
 - [ ] Implement card editing functionality
@@ -24,11 +23,14 @@ kanban-plugin: board
 
 ## Doing
 
-- [ ] Set up project structure and initialize repository (GitHub repo: https://github.com/dennisarmana/kanbanmd.git)
+
 
 
 ## Done
 
+- [x] The kanban.md file lives in a github repo. Can we pull it directly from there? (Improved with error handling and branch selection)
+- [x] Create basic HTML/CSS layout for the web application
+- [x] Set up project structure and initialize repository (GitHub repo: https://github.com/dennisarmana/kanbanmd.git)
 - [x] Analyze requirements from PRD
 - [x] Define initial project scope
 

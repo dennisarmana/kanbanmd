@@ -21,8 +21,11 @@
         </div>
         <div class="github-file">
           <h3>Load from GitHub</h3>
-          <input type="text" id="github-repo" placeholder="Repository URL">
-          <input type="text" id="github-path" placeholder="Path to kanban.md">
+          <input type="text" id="github-repo" placeholder="Repository URL or owner/repo">
+          <div class="github-options">
+            <input type="text" id="github-branch" placeholder="Branch (default: master)">
+            <input type="text" id="github-path" placeholder="Path to kanban.md">
+          </div>
           <button id="github-load">Load</button>
         </div>
       </div>
