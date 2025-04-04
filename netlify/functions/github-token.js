@@ -1,5 +1,3 @@
-const axios = require('axios');
-
 exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {
@@ -28,10 +26,26 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Log the request for debugging
+    console.log('Received token exchange request');
+    
     // Parse the request body
-    const { code } = JSON.parse(event.body);
+    let requestBody;
+    try {
+      requestBody = JSON.parse(event.body);
+    } catch (e) {
+      console.error('Error parsing request body:', e);
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Invalid JSON in request body' })
+      };
+    }
+    
+    const { code } = requestBody;
     
     if (!code) {
+      console.error('Missing code parameter');
       return {
         statusCode: 400,
         headers,
@@ -39,49 +53,78 @@ exports.handler = async (event, context) => {
       };
     }
     
-    // Log environment variables availability (without revealing values)
+    // Check environment variables (without revealing values)
+    const hasClientId = !!process.env.GITHUB_CLIENT_ID;
+    const hasClientSecret = !!process.env.GITHUB_CLIENT_SECRET;
+    
     console.log('Environment check:', { 
-      'GITHUB_CLIENT_ID': !!process.env.GITHUB_CLIENT_ID,
-      'GITHUB_CLIENT_SECRET': !!process.env.GITHUB_CLIENT_SECRET
+      'GITHUB_CLIENT_ID': hasClientId,
+      'GITHUB_CLIENT_SECRET': hasClientSecret
     });
+    
+    if (!hasClientId || !hasClientSecret) {
+      console.error('Missing GitHub credentials in environment variables');
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Server configuration error',
+          message: 'GitHub credentials not configured'
+        })
+      };
+    }
 
-    // Exchange the code for an access token
-    const response = await axios.post(
-      'https://github.com/login/oauth/access_token',
-      {
+    // Exchange the code for an access token using fetch instead of axios
+    const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
         client_id: process.env.GITHUB_CLIENT_ID,
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code: code
-      },
-      {
-        headers: {
-          Accept: 'application/json'
-        }
-      }
-    );
+      })
+    });
     
+    // Check if the request was successful
+    if (!tokenResponse.ok) {
+      console.error('GitHub API error:', tokenResponse.status, tokenResponse.statusText);
+      const errorText = await tokenResponse.text();
+      console.error('Error response:', errorText);
+      
+      return {
+        statusCode: tokenResponse.status,
+        headers,
+        body: JSON.stringify({ 
+          error: 'GitHub API error', 
+          status: tokenResponse.status,
+          message: tokenResponse.statusText,
+          details: errorText
+        })
+      };
+    }
+    
+    // Parse the response as JSON
+    const tokenData = await tokenResponse.json();
     console.log('GitHub token exchange successful');
 
     // Return the token response
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify(response.data)
+      body: JSON.stringify(tokenData)
     };
   } catch (error) {
-    console.error('Error exchanging code for token:', error.message);
-    if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-    }
+    console.error('Unexpected error in token exchange:', error);
     
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({ 
         error: 'Failed to exchange code for token', 
-        message: error.message,
-        details: error.response ? error.response.data : null
+        message: error.message || 'Unknown error'
       })
     };
   }
