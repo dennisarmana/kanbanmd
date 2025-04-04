@@ -34,7 +34,7 @@ function initAuth() {
     clientID: 'iFZoba1GgxzgPpQr9mVkkL3cospv4BnC',
     responseType: 'token id_token',
     scope: 'openid profile email read:user repo',
-    redirectUri: window.location.origin
+    redirectUri: 'https://kanbanmd.netlify.app'
   });
   
   // Update login button click handler
@@ -208,7 +208,7 @@ function logout() {
   
   // Redirect to Auth0 logout to clear the Auth0 session
   authState.auth0Client.logout({
-    returnTo: window.location.origin
+    returnTo: 'https://kanbanmd.netlify.app'
   });
 }
 
