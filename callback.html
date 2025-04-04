@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication Callback</title>
+</head>
+<body>
+  <h2>Authenticating...</h2>
+  <p>Please wait while we complete the authentication process.</p>
+
+  <script>
+    // Extract the access token from the URL hash
+    function getHashParams() {
+      const hashParams = {};
+      let e,
+          r = /([^&;=]+)=?([^&;]*)/g,
+          q = window.location.hash.substring(1);
+      
+      while (e = r.exec(q)) {
+        hashParams[e[1]] = decodeURIComponent(e[2]);
+      }
+      
+      return hashParams;
+    }
+
+    // Process the callback and store the token
+    function processCallback() {
+      const params = getHashParams();
+      
+      if (params.access_token) {
+        // Store the GitHub token
+        localStorage.setItem('github_token', params.access_token);
+        localStorage.setItem('github_token_expires_at', 
+          new Date().getTime() + (params.expires_in * 1000 || 3600000));
+        
+        // Redirect to the main application
+        window.location.href = '/';
+      } else if (params.error) {
+        // Handle errors
+        console.error('Authentication error:', params.error);
+        window.location.href = '/?error=' + encodeURIComponent(params.error);
+      } else if (window.location.search.includes('code=')) {
+        // Handle authorization code flow
+        const code = new URLSearchParams(window.location.search).get('code');
+        // We'll exchange this for a token on the server side
+        window.location.href = '/?code=' + code;
+      }
+    }
+
+    // Run when the page loads
+    window.onload = processCallback;
+  </script>
+</body>
+</html>
