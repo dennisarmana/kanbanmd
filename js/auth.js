@@ -12,30 +12,31 @@ let authState = {
   auth0Client: null      // Auth0 client instance
 };
 
-// Auth0 configuration - these will need to be updated with your Auth0 values
-const auth0Config = {
-  domain: 'dev-zjt51en5zisu615c.us.auth0.com',       // e.g., 'dev-abc123.us.auth0.com'
-  clientId: 'YOUR_AUTH0_CLIENT_ID',  // Get this from Auth0 dashboard
-  authorizationParams: {
-    redirect_uri: window.location.origin,
-    audience: 'https://api.github.com/',  // GitHub API audience
-    scope: 'openid profile email read:user repo'
-  }
-};
-
 // DOM elements
 let loginButton, userInfo, usernameDisplay, syncIndicator, syncText;
 
 /**
  * Initialize authentication
  */
-async function initAuth() {
+function initAuth() {
+  console.log('Initializing Auth0');
+  
   // Get DOM elements after the DOM is loaded
   loginButton = document.getElementById('login-button');
   userInfo = document.getElementById('user-info');
   usernameDisplay = document.getElementById('username');
   syncIndicator = document.getElementById('sync-indicator');
   syncText = document.getElementById('sync-text');
+  
+  // Create Auth0 WebAuth instance
+  authState.auth0Client = new auth0.WebAuth({
+    domain: 'dev-zjt51en5zisu615c.us.auth0.com',
+    clientID: 'iFZoba1GgxzgPpQr9mVkkL3cospv4BnC',
+    responseType: 'token id_token',
+    audience: 'https://api.github.com/',
+    scope: 'openid profile email read:user repo',
+    redirectUri: window.location.origin
+  });
   
   // Update login button click handler
   if (loginButton) {
@@ -47,57 +48,102 @@ async function initAuth() {
   if (logoutButton) {
     logoutButton.onclick = logout;
   }
+  
+  // Check if we have a callback from Auth0
+  parseAuthHash();
+  
+  // Check if we have a valid session already
+  checkSession();
+}
 
-  try {
-    // Create Auth0 client
-    authState.auth0Client = await createAuth0Client(auth0Config);
-    
-    // Check if user was redirected after login
-    if (window.location.search.includes('code=')) {
-      // Handle the redirect and get tokens
-      await authState.auth0Client.handleRedirectCallback();
+/**
+ * Parse the authentication hash
+ */
+function parseAuthHash() {
+  authState.auth0Client.parseHash((err, authResult) => {
+    if (authResult && authResult.accessToken && authResult.idToken) {
+      // Set tokens and expiration time
+      setSession(authResult);
       
-      // Clear the URL parameters
+      // Get user info
+      authState.auth0Client.client.userInfo(authResult.accessToken, (err, user) => {
+        if (err) {
+          console.error('Error getting user info:', err);
+          return;
+        }
+        handleUserLogin(user, authResult);
+      });
+      
+      // Remove hash from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (err) {
+      console.error('Auth0 authentication error:', err);
+      handleUserLogout();
+      
+      // Remove hash from URL
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-    
-    // Check if user is authenticated
-    const isAuthenticated = await authState.auth0Client.isAuthenticated();
-    
-    if (isAuthenticated) {
-      const user = await authState.auth0Client.getUser();
-      handleUserLogin(user);
-    } else {
+  });
+}
+
+/**
+ * Check if there is an existing session
+ */
+function checkSession() {
+  authState.auth0Client.checkSession({}, (err, authResult) => {
+    if (authResult && authResult.accessToken && authResult.idToken) {
+      setSession(authResult);
+      
+      // Get user info
+      authState.auth0Client.client.userInfo(authResult.accessToken, (err, user) => {
+        if (err) {
+          console.error('Error getting user info:', err);
+          return;
+        }
+        handleUserLogin(user, authResult);
+      });
+    } else if (err) {
+      // Silent authentication error. User might not be authenticated.
+      console.log('Silent authentication error:', err);
       handleUserLogout();
     }
-    
-    console.log('Auth0 initialized');
-  } catch (error) {
-    console.error('Error initializing Auth0:', error);
-    handleUserLogout();
+  });
+}
+
+/**
+ * Set the user's session
+ * @param {Object} authResult - The authentication result
+ */
+function setSession(authResult) {
+  // Set the time that the access token will expire
+  const expiresAt = JSON.stringify(authResult.expiresIn * 1000 + new Date().getTime());
+  localStorage.setItem('auth0_access_token', authResult.accessToken);
+  localStorage.setItem('auth0_id_token', authResult.idToken);
+  localStorage.setItem('auth0_expires_at', expiresAt);
+  
+  // Store GitHub token if present
+  if (authResult.idTokenPayload && authResult.idTokenPayload['https://api.github.com/']) {
+    const githubToken = authResult.idTokenPayload['https://api.github.com/'].access_token;
+    localStorage.setItem('github_token', githubToken);
+    authState.githubToken = githubToken;
   }
 }
 
 /**
  * Handle user login
  * @param {Object} user - The authenticated user object
+ * @param {Object} authResult - The authentication result
  */
-async function handleUserLogin(user) {
+function handleUserLogin(user, authResult) {
   authState.user = user;
   authState.isAuthenticated = true;
   
-  try {
-    // Get GitHub access token from the Claims
-    const claims = await authState.auth0Client.getIdTokenClaims();
-    if (claims) {
-      // The token will be in a format like: { 'https://api.github.com/': { access_token: 'token' } }
-      const githubClaim = claims['https://api.github.com/'];
-      if (githubClaim && githubClaim.access_token) {
-        authState.githubToken = githubClaim.access_token;
-      }
-    }
-  } catch (error) {
-    console.error('Error getting token claims:', error);
+  // Grab GitHub token from the ID token if available
+  if (authResult && authResult.idTokenPayload && authResult.idTokenPayload['https://api.github.com/']) {
+    authState.githubToken = authResult.idTokenPayload['https://api.github.com/'].access_token;
+  } else {
+    // Try to get from localStorage as a backup
+    authState.githubToken = localStorage.getItem('github_token');
   }
   
   // Update UI
@@ -117,6 +163,12 @@ async function handleUserLogin(user) {
  * Handle user logout
  */
 function handleUserLogout() {
+  // Remove tokens and expiry time from localStorage
+  localStorage.removeItem('auth0_access_token');
+  localStorage.removeItem('auth0_id_token');
+  localStorage.removeItem('auth0_expires_at');
+  localStorage.removeItem('github_token');
+  
   // Reset auth state
   authState.user = null;
   authState.isAuthenticated = false;
@@ -140,38 +192,25 @@ function handleUserLogout() {
 /**
  * Login with Auth0
  */
-async function login() {
+function login() {
   if (!authState.auth0Client) {
     console.error('Auth0 client not initialized');
     return;
   }
   
-  try {
-    await authState.auth0Client.loginWithRedirect();
-  } catch (error) {
-    console.error('Login error:', error);
-  }
+  authState.auth0Client.authorize();
 }
 
 /**
  * Logout from Auth0
  */
-async function logout() {
-  if (!authState.auth0Client) {
-    console.error('Auth0 client not initialized');
-    return;
-  }
+function logout() {
+  handleUserLogout();
   
-  try {
-    await authState.auth0Client.logout({
-      logoutParams: {
-        returnTo: window.location.origin
-      }
-    });
-    handleUserLogout();
-  } catch (error) {
-    console.error('Logout error:', error);
-  }
+  // Redirect to Auth0 logout to clear the Auth0 session
+  authState.auth0Client.logout({
+    returnTo: window.location.origin
+  });
 }
 
 /**
@@ -208,7 +247,11 @@ function updateSyncStatus(status) {
  * @returns {boolean} Whether the user is authenticated
  */
 function isAuthenticated() {
-  return authState.isAuthenticated;
+  // Check whether the current time is past the access token's expiry time
+  const expiresAt = JSON.parse(localStorage.getItem('auth0_expires_at') || '0');
+  const isAuth = new Date().getTime() < expiresAt && !!localStorage.getItem('auth0_access_token');
+  authState.isAuthenticated = isAuth;
+  return isAuth;
 }
 
 /**
@@ -216,6 +259,10 @@ function isAuthenticated() {
  * @returns {string|null} The GitHub token or null if not authenticated
  */
 function getGitHubToken() {
+  if (!authState.githubToken) {
+    // Try to get from localStorage if not already in memory
+    authState.githubToken = localStorage.getItem('github_token');
+  }
   return authState.githubToken;
 }
 
