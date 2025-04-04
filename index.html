@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kanban.md Web Tool</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Kanban.md Web Tool</h1>
+  </header>
+  
+  <main id="app">
+    <div id="file-section">
+      <h2>Select Kanban File</h2>
+      <div class="file-options">
+        <div class="local-file">
+          <h3>Upload Local File</h3>
+          <input type="file" id="file-input" accept=".md">
+        </div>
+        <div class="github-file">
+          <h3>Load from GitHub</h3>
+          <input type="text" id="github-repo" placeholder="Repository URL">
+          <input type="text" id="github-path" placeholder="Path to kanban.md">
+          <button id="github-load">Load</button>
+        </div>
+      </div>
+    </div>
+    
+    <div id="board-container" class="hidden">
+      <!-- Kanban board will be rendered here -->
+    </div>
+  </main>
+
+  <footer>
+    <p>Kanban.md Web Tool - <a href="https://github.com/dennisarmana/kanbanmd" target="_blank">GitHub</a></p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/parser.js"></script>
+  <script src="js/board.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
