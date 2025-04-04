@@ -202,6 +202,106 @@ button:hover {
   height: 100%;
 }
 
+/* Enhanced Markdown and Card Metadata Styles */
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-text em {
+  font-style: italic;
+}
+
+.card-text strong {
+  font-weight: bold;
+}
+
+.card-text code {
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 90%;
+}
+
+.card-text a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.card-text a:hover {
+  text-decoration: underline;
+}
+
+.card-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+  font-size: 12px;
+}
+
+.tag {
+  background-color: rgba(52, 152, 219, 0.15);
+  color: var(--primary-color);
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.priority {
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.priority-high {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.priority-medium {
+  background-color: rgba(243, 156, 18, 0.2);
+  color: #f39c12;
+}
+
+.priority-low {
+  background-color: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+}
+
+.due-date {
+  background-color: rgba(155, 89, 182, 0.2);
+  color: #9b59b6;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.card-extended-content {
+  padding: 5px 0;
+  font-size: 13px;
+  color: #666;
+  border-top: 1px solid #eee;
+  margin-top: 3px;
+}
+
+.code-block-marker {
+  font-family: monospace;
+  color: #999;
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+}
+
 .kanban-card:hover .drag-handle {
   color: #666;
 }
@@ -231,7 +331,54 @@ button:hover {
   word-break: break-word;
   line-height: 1.4;
   width: 100%;
-  min-height: 20px;
+  padding: 8px;
+  border: 1px solid var(--primary-color);
+  border-radius: 4px;
+  margin-bottom: 5px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.edit-buttons-container {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.save-edit-btn,
+.cancel-edit-btn {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  max-width: 80px;
+}
+
+.save-edit-btn {
+  background-color: var(--secondary-color);
+  color: white;
+  border: none;
+}
+
+.cancel-edit-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+}
+
+.help-markdown-btn {
+  background-color: #95a5a6;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-weight: bold;
+  margin-left: auto;
+  cursor: pointer;
 }
 
 .edit-card-input {
@@ -285,8 +432,8 @@ button:hover {
 }
 
 .kanban-card.dragging {
-  opacity: 0.4;
-  cursor: grabbing;
+  opacity: 0.5;
+  border: 2px dashed var(--primary-color);
 }
 
 .kanban-card.ghost {

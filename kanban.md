@@ -6,15 +6,18 @@ kanban-plugin: board
 
 ## Todo
 
-- [ ] Enhance Markdown parser to handle complex kanban structures (nested lists, links in cards)
 - [ ] Improve file synchronization mechanism (currently only download, not real-time sync)
-- [ ] Add auto-save functionality for continuous updates to markdown
+- [ ] Add auto-save functionality for continuous updates to markdown. Does this work with github? What's the best strategy to keep the kanban up to date?
 - [ ] Create version history and undo/redo capability
 - [ ] Add column customization (color, width, order)
 - [ ] Write unit tests for core functionality
 - [ ] Create documentation for deployment and usage
 - [ ] Optimize performance for larger Kanban boards
 - [ ] Add user settings and preferences
+- [ ] Fix remaining issues with Markdown parser #bug
+  - [ ] Debug issues with code blocks in cards
+  - [ ] Improve nested list indentation handling
+  - [ ] Add support for tables and other advanced Markdown features
 
 
 ## Doing
@@ -23,6 +26,7 @@ kanban-plugin: board
 
 ## Done
 
+- [x] Enhance Markdown parser to handle complex kanban structures (nested lists, links in cards)
 - [x] Implement drag-and-drop capability between columns
 - [x] Fix visual issues in rendered Kanban board (card alignment, delete buttons, drag handles, text editing)
 - [x] Implement card editing functionality with improved UI
