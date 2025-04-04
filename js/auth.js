@@ -5,7 +5,7 @@
 
 // GitHub OAuth Configuration
 const authConfig = {
-  clientId: 'iFZoba1GgxzgPpQr9mVkkL3cospv4BnC', // Your GitHub OAuth App client ID
+  clientId: 'Ov23lifJBTDDgx7A08S2', // Your GitHub OAuth App client ID
   redirectUri: 'https://kanbanmd.netlify.app/callback.html',
   authorizationEndpoint: 'https://github.com/login/oauth/authorize',
   tokenEndpoint: '/.netlify/functions/github-token',
@@ -278,9 +278,8 @@ document.addEventListener('DOMContentLoaded', initAuth);
 
 // Export functions for use in other modules
 window.auth = {
-  isAuthenticated,
+  isAuthenticated: () => authState.isAuthenticated,
   getGitHubToken,
-  updateSyncStatus,
   login,
   logout
 };
